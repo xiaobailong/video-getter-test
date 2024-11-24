@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!--
+              %black, %red, %green, %yellow, %blue, %magenta, %cyan, %white, %gray, %boldRed,
+              %boldGreen, %boldYellow, %boldBlue, %boldMagenta, %boldCyan, %boldWhite, %highlight
+            -->
+            <!--<pattern>faint(%d{yyyy-MM-dd HH:mm:ss.SSS}) %highlight(%-5level) [%-40.40logger{10}] - %msg%n</pattern>-->
+            <pattern>%white(%d{yyyy-MM-dd HH:mm:ss.SSS}) %highlight(%-5level) %magenta(%thread{10}) [%cyan(%-25.25logger{24})] - %boldWhite(%msg%n)
+            </pattern>
+        </encoder>
+    </appender>
+    <appender name="mainAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>douyin-test/logs/log.txt</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>video-getter-test/logs/log.txt.%d{yyyy-MM-dd}</fileNamePattern>
+            <MaxHistory>15</MaxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %thread %-5level [%c] %L - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <root level="info">
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="mainAppender"/>
+    </root>
+</configuration>
