@@ -12,7 +12,7 @@
         </encoder>
     </appender>
     <appender name="mainAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>douyin-test/logs/log.txt</file>
+        <file>video-getter-test/logs/log.txt</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>video-getter-test/logs/log.txt.%d{yyyy-MM-dd}</fileNamePattern>
             <MaxHistory>15</MaxHistory>
