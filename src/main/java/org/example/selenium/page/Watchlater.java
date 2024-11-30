@@ -36,9 +36,9 @@ public class Watchlater {
         Thread.sleep(3 * 1000);
 
         String js2 = "window.scrollBy(0,1000);";
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 10; i++) {
             ((JavascriptExecutor) webDriver).executeScript(js2);
-            Thread.sleep(3 * 1000);
+            Thread.sleep(5 * 1000);
             log.info("scroll index: " + i);
         }
 

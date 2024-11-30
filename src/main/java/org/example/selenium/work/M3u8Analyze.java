@@ -146,7 +146,7 @@ public class M3u8Analyze {
                     urlNew = line;
                 }
 
-                UrlInfo urlInfo = CustomStringUtils.parseFileUrlInfo(line);
+                UrlInfo urlInfo = CustomStringUtils.parseUrlInfo(line);
 
                 m3U8Info.getM3u8ItemUrls().add(urlNew);
                 m3U8Info.getM3u8ItemFileNames().add(urlInfo.getFileName());
