@@ -77,16 +77,17 @@ public class Watchlater {
             log.info(index + FileEnums.FILE_PATH_SEPARATOR + videoInfos.size() + "\t" + title + "\t" + href);
 
             M3U8Info m3U8Info = new M3U8Info();
+
             m3U8Info.setCacheFilePathName(cacheFilePathName);
             String cacheFilePath = FileEnums.PATH_PREX + FileEnums.FILE_PATH_SEPARATOR + m3U8Info.getCacheFilePathName();
             m3U8Info.setCacheFilePath(cacheFilePath);
 
-            VideoUtils.clearVideoCachePath(cacheFilePath);
-            FileIOUtils.outputWatchlaterInfo(m3U8Info);
-
             m3U8Info.setTitle(title);
             m3U8Info.setTitleOrigin(videoInfo.getTitle());
             m3U8Info.setVideoUrl(href);
+
+            VideoUtils.clearVideoCachePath(cacheFilePath);
+            FileIOUtils.outputWatchlaterInfo(m3U8Info);
 
             getVideo(webDriver, proxy, m3U8Info);
 
