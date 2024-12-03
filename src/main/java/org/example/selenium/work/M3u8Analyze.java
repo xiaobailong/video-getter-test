@@ -61,14 +61,14 @@ public class M3u8Analyze {
 
         while ((line = reader.readLine()) != null && !isDownload) {
 
-            log.info(line);
+//            log.info(line);
 
             HarEntry harEntry = JSON.parseObject(line, HarEntry.class);
             String url = harEntry.getRequest().getUrl();
 //            log.info("url: " + url);
 
             if (!url.contains("mp4")) {
-                log.info("not_mp4_url: " + url);
+//                log.info("not_mp4_url: " + url);
                 continue;
             }
 
@@ -118,7 +118,7 @@ public class M3u8Analyze {
                     urlNew = line;
                 }
 
-                UrlInfo urlInfo = UrlAnalysisUtils.parseUrlInfo(line);
+                UrlInfo urlInfo = UrlAnalysisUtils.parseUrlInfo(urlNew);
 
                 m3U8Info.getM3u8ItemUrls().add(urlNew);
                 m3U8Info.getM3u8ItemFileNames().add(urlInfo.getFileName());
@@ -152,7 +152,7 @@ public class M3u8Analyze {
             }
 
             String urlPrex = m3U8Info.getUrlPrex();
-            log.info("m3U8Info.getUrlPrex():\t" + urlPrex);
+            log.info("urlPrex:\t" + urlPrex);
 
             while ((line = reader.readLine()) != null) {
                 if (line.contains(FileEnums.TF_FILE_EXTENSION_NAME)) {
@@ -165,6 +165,7 @@ public class M3u8Analyze {
                         e.printStackTrace();
                     }
 
+                    log.info(line);
                 } else if (!line.startsWith("#") && line.contains(FileEnums.VIDEO_FILE_EXTENSION_NAME)) {
 
                     String url = urlPrex + line;
@@ -177,9 +178,10 @@ public class M3u8Analyze {
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
+
+                    log.info(line);
                 }
 
-                log.info(line);
             }
 
             reader.close();

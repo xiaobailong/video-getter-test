@@ -23,7 +23,7 @@ public class TSFileMerge {
             if (tfFiles == null || tfFiles.length == 0) {
                 return null;
             }
-            Arrays.sort(tfFiles);
+            Arrays.sort(tfFiles, new FileComparator());
             log.info(JSON.toJSONString(tfFiles));
 
             BufferedWriter bw = new BufferedWriter(new FileWriter(ffmpegTsFilePath));
@@ -40,5 +40,27 @@ public class TSFileMerge {
             e.printStackTrace(System.err);
         }
         return null;
+    }
+
+    public static void main(String[] args) {
+        try {
+            BufferedReader br = new BufferedReader(new FileReader("C:\\Users\\guangbai\\Downloads\\ffmpegTsFilePath.txt"));
+            String line;
+            File[] files = new File[405];
+            int i = 0;
+            while ((line = br.readLine()) != null) {
+                String fileName = line.replace("file ", "");
+//                System.out.println(fileName);
+                files[i++] = new File(fileName);
+            }
+            Arrays.sort(files, new FileComparator());
+            br.close();
+            for (File file : files) {
+                System.out.println(file.getName());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 }
