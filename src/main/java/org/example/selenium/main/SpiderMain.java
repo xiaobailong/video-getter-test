@@ -28,10 +28,10 @@ public class SpiderMain {
         System.getProperties().setProperty("https.proxyHost", "127.0.0.1");
         System.getProperties().setProperty("https.proxyPort", "7897");
 
-        login();
+        work();
     }
 
-    private static void login() throws Exception {
+    private static void work() throws Exception {
 
         String homeUrl = ConfigTable.queryValue("homeUrl");
 
@@ -77,7 +77,7 @@ public class SpiderMain {
 
         Login.login(webDriver);
 
-        Watchlater.go2LastView(webDriver, proxy);
+        Watchlater.getVideoList(webDriver, proxy);
 
         Thread.sleep(10 * 1000l);
 

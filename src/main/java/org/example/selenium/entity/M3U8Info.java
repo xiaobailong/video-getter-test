@@ -8,8 +8,6 @@ import java.util.List;
 @Data
 public class M3U8Info {
 
-    private String pathPrex = "D:/FTP/no";
-
     private String title;
 
     private String titleOrigin;
@@ -24,9 +22,11 @@ public class M3U8Info {
 
     private String videoUrl;
 
-    private String workFilePath;
+    private String cacheFilePath;
 
     private String urlPrex;
+
+    private String cacheFilePathName;
 
     private List<String> m3u8ItemUrls = new ArrayList<>();
     private List<String> m3u8ItemFileNames = new ArrayList<>();

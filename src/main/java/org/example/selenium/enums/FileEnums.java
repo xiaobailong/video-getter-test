@@ -2,7 +2,9 @@ package org.example.selenium.enums;
 
 public class FileEnums {
 
-    public static String PATH_PREX = "D:/FTP/no";
+    public static String SAVE_PATH = "D:/FTP/no";
+
+    public static String PATH_PREX = SAVE_PATH + "/cache";
 
     public static String M3U8_INFO_FILE_NAME = "m3U8Info.txt";
 
@@ -13,8 +15,6 @@ public class FileEnums {
     public static String TF_FILE_PATH_NAME = "ts";
 
     public static String M3U8_MASTER_FILE_NAME = "master.m3u8";
-
-    public static String M3U8_MASTER_FILE_NAME_WITHOUT_EXTENSION_NAME = "master";
 
     public static String TF_FILE_EXTENSION_NAME = ".ts";
 
@@ -29,4 +29,6 @@ public class FileEnums {
     public static String FILE_PATH_SEPARATOR = "/";
 
     public static String PROTOCOL = "http";
+
+    public static String FFMPEG_FILE_PATH = "D:/Tools/DevTools/base/ffmpeg-master-latest-win64-gpl/bin/ffmpeg.exe";
 }

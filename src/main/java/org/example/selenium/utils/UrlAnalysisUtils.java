@@ -4,7 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.selenium.entity.UrlInfo;
 
 @Slf4j
-public class CustomStringUtils {
+public class UrlAnalysisUtils {
 
     public static UrlInfo parseUrlInfo(String line) {
         UrlInfo urlInfo = new UrlInfo();
@@ -55,14 +55,16 @@ public class CustomStringUtils {
     }
 
     public static String getUrlPrex(String line, String key) {
-        int index = line.length();
+        int index;
         if (line.contains(key)) {
             index = line.indexOf(key);
         } else {
             index = line.lastIndexOf("/");
         }
+
         log.info(line + "\t" + key + "\t" + index);
         log.info(line.substring(0, index));
+
         return line.substring(0, index);
     }
 
