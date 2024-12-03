@@ -48,6 +48,9 @@ public class M3u8Analyze {
 
         String pathDate = new DateTime().toString(DateTimeFormatEnum.PATH_DATE);
         String savePath = FileEnums.SAVE_PATH + FileEnums.FILE_PATH_SEPARATOR + pathDate;
+        if (!FileUtil.exist(savePath)) {
+            FileUtil.mkdir(savePath);
+        }
         String videoPath = savePath + FileEnums.FILE_PATH_SEPARATOR + m3U8Info.getTitle() + FileEnums.VIDEO_FILE_EXTENSION_NAME;
         CMDProcess.executive(ffmpegTsFilePath, videoPath);
 
