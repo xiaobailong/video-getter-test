@@ -1,5 +1,6 @@
 package org.example.selenium.work;
 
+import cn.hutool.core.date.DateTime;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson2.JSON;
@@ -9,6 +10,7 @@ import net.lightbody.bmp.core.har.HarEntry;
 import org.example.selenium.db.PageHistoryTable;
 import org.example.selenium.entity.M3U8Info;
 import org.example.selenium.entity.UrlInfo;
+import org.example.selenium.enums.DateTimeFormatEnum;
 import org.example.selenium.enums.FileEnums;
 import org.example.selenium.utils.UrlAnalysisUtils;
 import org.example.selenium.utils.TextOutputUtil;
@@ -44,7 +46,9 @@ public class M3u8Analyze {
             return;
         }
 
-        String videoPath = FileEnums.SAVE_PATH + FileEnums.FILE_PATH_SEPARATOR + m3U8Info.getTitle() + FileEnums.VIDEO_FILE_EXTENSION_NAME;
+        String pathDate = new DateTime().toString(DateTimeFormatEnum.PATH_DATE);
+        String savePath = FileEnums.SAVE_PATH + FileEnums.FILE_PATH_SEPARATOR + pathDate;
+        String videoPath = savePath + FileEnums.FILE_PATH_SEPARATOR + m3U8Info.getTitle() + FileEnums.VIDEO_FILE_EXTENSION_NAME;
         CMDProcess.executive(ffmpegTsFilePath, videoPath);
 
         if (FileUtil.exist(videoPath)) {

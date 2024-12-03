@@ -32,8 +32,8 @@ public class ConfigTable extends BaseDB {
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
 
-            String create_time = new DateTime().toString(DateTimeFormatEnum.DATATIME);
-            String update_time = new DateTime().toString(DateTimeFormatEnum.DATATIME);
+            String create_time = new DateTime().toString(DateTimeFormatEnum.DATE_TIME);
+            String update_time = new DateTime().toString(DateTimeFormatEnum.DATE_TIME);
             String sql = String.format("insert into config(key,value,create_time,update_time) " +
                     "values('%s','%s','%s','%s')", key, value, create_time, update_time);
 
