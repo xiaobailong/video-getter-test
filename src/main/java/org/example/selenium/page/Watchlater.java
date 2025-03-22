@@ -1,5 +1,7 @@
 package org.example.selenium.page;
 
+import cn.hutool.core.date.DateTime;
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.alibaba.fastjson2.JSON;
 import lombok.extern.slf4j.Slf4j;
@@ -9,7 +11,9 @@ import org.example.selenium.db.ConfigTable;
 import org.example.selenium.db.PageHistoryTable;
 import org.example.selenium.entity.M3U8Info;
 import org.example.selenium.entity.VideoInfo;
+import org.example.selenium.enums.DateTimeFormatEnum;
 import org.example.selenium.enums.FileEnums;
+import org.example.selenium.enums.FilePathEnums;
 import org.example.selenium.utils.FileIOUtils;
 import org.example.selenium.utils.VideoUtils;
 import org.example.selenium.work.M3u8Analyze;
@@ -43,6 +47,10 @@ public class Watchlater {
         List<WebElement> videos = videoPlaylist.findElements(By.cssSelector("[class='pcVideoListItem js-pop videoblock videoBox  canEdit']"));
 
         List<VideoInfo> videoInfos = new ArrayList<>();
+        String listFileName = FileEnums.SAVE_PATH + "/" + new DateTime().toString(DateTimeFormatEnum.PATH_DATE) + ".txt";
+        if (FileUtil.exist(listFileName)) {
+            FileUtil.del(listFileName);
+        }
         for (WebElement element : videos) {
             WebElement titleWebElement = element.findElement(By.className("title"));
             String title = titleWebElement.getText();
@@ -60,6 +68,7 @@ public class Watchlater {
             videoInfo.setHref(href);
             videoInfo.setTitle(title);
             videoInfos.add(videoInfo);
+            FileUtil.appendUtf8String(href, listFileName);
         }
 
         int index = 0;
