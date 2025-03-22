@@ -68,7 +68,7 @@ public class Watchlater {
             videoInfo.setHref(href);
             videoInfo.setTitle(title);
             videoInfos.add(videoInfo);
-            FileUtil.appendUtf8String(href, listFileName);
+            FileUtil.appendUtf8String(href + "\n", listFileName);
         }
 
         int index = 0;
