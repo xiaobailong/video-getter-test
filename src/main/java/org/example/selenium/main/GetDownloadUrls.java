@@ -27,7 +27,7 @@ public class GetDownloadUrls {
     }
 
     public static void saveDownloadUrls() {
-        String listFileName = FileUtil.getUserHomePath() + "/Downloads/save.txt";
+        String listFileName = FileEnums.SAVE_PATH + "/" + new DateTime().toString(DateTimeFormatEnum.PATH_DATE) + ".txt";
         List<String> lines = FileUtil.readUtf8Lines(listFileName);
         for (String line : lines) {
             if (PageHistoryTable.isExist(line)) {
