@@ -44,7 +44,7 @@ public class Watchlater {
         Thread.sleep(3 * 1000);
 
         WebElement videoPlaylist = webDriver.findElement(By.id("videoPlaylist"));
-        List<WebElement> videos = videoPlaylist.findElements(By.cssSelector("[class='pcVideoListItem js-pop videoblock videoBox  canEdit']"));
+        List<WebElement> videos = videoPlaylist.findElements(By.cssSelector("[class='pcVideoListItem js-pop videoblock videoBox canEdit']"));
 
         List<VideoInfo> videoInfos = new ArrayList<>();
         String listFileName = FileEnums.SAVE_PATH + "/" + new DateTime().toString(DateTimeFormatEnum.PATH_DATE) + ".txt";
