@@ -17,6 +17,7 @@ import org.example.selenium.enums.FilePathEnums;
 import org.example.selenium.utils.FileIOUtils;
 import org.example.selenium.utils.VideoUtils;
 import org.example.selenium.work.M3u8Analyze;
+import org.example.selenium.work.CocoCutVideoAnalyzer;
 import org.openqa.selenium.*;
 
 import java.io.File;
@@ -44,7 +45,7 @@ public class Watchlater {
         Thread.sleep(3 * 1000);
 
         WebElement videoPlaylist = webDriver.findElement(By.id("videoPlaylist"));
-        List<WebElement> videos = videoPlaylist.findElements(By.cssSelector("[class='pcVideoListItem js-pop videoblock videoBox  canEdit']"));
+        List<WebElement> videos = videoPlaylist.findElements(By.cssSelector("[class='pcVideoListItem js-pop videoblock videoBox canEdit']"));
 
         List<VideoInfo> videoInfos = new ArrayList<>();
         String listFileName = FileEnums.SAVE_PATH + "/" + new DateTime().toString(DateTimeFormatEnum.PATH_DATE) + ".txt";
@@ -139,7 +140,15 @@ public class Watchlater {
 
         m3U8Info.setLogFilePath(logFilePath);
 
-        M3u8Analyze.downloadVideo(m3U8Info);
+        // Get download method from config (default to original if not set)
+        String downloadMethod = ConfigTable.queryValue("downloadMethod");
+        if ("cococut".equalsIgnoreCase(downloadMethod)) {
+            log.info("Using CocoCut method to download video");
+            CocoCutVideoAnalyzer.downloadVideo(m3U8Info);
+        } else {
+            log.info("Using original method to download video");
+            M3u8Analyze.downloadVideo(m3U8Info);
+        }
     }
 
 
