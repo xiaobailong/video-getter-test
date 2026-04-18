@@ -13,14 +13,12 @@ import org.example.selenium.entity.M3U8Info;
 import org.example.selenium.entity.VideoInfo;
 import org.example.selenium.enums.DateTimeFormatEnum;
 import org.example.selenium.enums.FileEnums;
-import org.example.selenium.enums.FilePathEnums;
 import org.example.selenium.utils.FileIOUtils;
 import org.example.selenium.utils.VideoUtils;
 import org.example.selenium.work.M3u8Analyze;
 import org.example.selenium.work.CocoCutVideoAnalyzer;
 import org.openqa.selenium.*;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -141,14 +139,14 @@ public class Watchlater {
         m3U8Info.setLogFilePath(logFilePath);
 
         // Get download method from config (default to original if not set)
-        String downloadMethod = ConfigTable.queryValue("downloadMethod");
-        if ("cococut".equalsIgnoreCase(downloadMethod)) {
+//        String downloadMethod = ConfigTable.queryValue("downloadMethod");
+//        if ("cococut".equalsIgnoreCase(downloadMethod)) {
             log.info("Using CocoCut method to download video");
             CocoCutVideoAnalyzer.downloadVideo(m3U8Info);
-        } else {
-            log.info("Using original method to download video");
-            M3u8Analyze.downloadVideo(m3U8Info);
-        }
+//        } else {
+//            log.info("Using original method to download video");
+//            M3u8Analyze.downloadVideo(m3U8Info);
+//        }
     }
 
 

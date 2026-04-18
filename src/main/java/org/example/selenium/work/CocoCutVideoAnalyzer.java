@@ -15,6 +15,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -22,9 +23,20 @@ import java.util.regex.Pattern;
 public class CocoCutVideoAnalyzer {
 
     // Video file extensions to detect
-    private static final List<String> VIDEO_EXTENSIONS = List.of(
-            "mp4", "m3u8", "ts", "mkv", "avi", "wmv", "flv", "mov", "webm"
-    );
+    private static final List<String> VIDEO_EXTENSIONS;
+    static {
+        List<String> extensions = new ArrayList<>();
+        extensions.add("mp4");
+        extensions.add("m3u8");
+        extensions.add("ts");
+        extensions.add("mkv");
+        extensions.add("avi");
+        extensions.add("wmv");
+        extensions.add("flv");
+        extensions.add("mov");
+        extensions.add("webm");
+        VIDEO_EXTENSIONS = Collections.unmodifiableList(extensions);
+    }
 
     // Patterns for detecting video URLs
     private static final Pattern VIDEO_URL_PATTERN = Pattern.compile(
@@ -186,17 +198,17 @@ public class CocoCutVideoAnalyzer {
         log.info("URL prefix: " + urlPrex);
 
         while ((line = reader.readLine()) != null) {
-            line = line.trim();
+            final String currentLine = line.trim();
             // Skip comments and empty lines
-            if (line.startsWith("#") || line.isEmpty()) {
+            if (currentLine.startsWith("#") || currentLine.isEmpty()) {
                 continue;
             }
 
             // Handle TS files
-            if (line.endsWith(".ts")) {
-                String tsUrl = line;
+            if (currentLine.endsWith(".ts")) {
+                String tsUrl = currentLine;
                 if (!tsUrl.startsWith("http")) {
-                    tsUrl = urlPrex + line;
+                    tsUrl = urlPrex + currentLine;
                 }
 
                 try {
@@ -207,10 +219,10 @@ public class CocoCutVideoAnalyzer {
                 }
             }
             // Handle other video files
-            else if (VIDEO_EXTENSIONS.stream().anyMatch(ext -> line.endsWith("." + ext))) {
-                String videoUrl = line;
+            else if (VIDEO_EXTENSIONS.stream().anyMatch(ext -> currentLine.endsWith("." + ext))) {
+                String videoUrl = currentLine;
                 if (!videoUrl.startsWith("http")) {
-                    videoUrl = urlPrex + line;
+                    videoUrl = urlPrex + currentLine;
                 }
 
                 try {
