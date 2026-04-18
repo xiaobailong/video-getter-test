@@ -1,7 +1,6 @@
 package org.example.selenium.work;
 
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.util.ReUtil;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
