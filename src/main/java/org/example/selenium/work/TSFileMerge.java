@@ -50,13 +50,13 @@ public class TSFileMerge {
             int i = 0;
             while ((line = br.readLine()) != null) {
                 String fileName = line.replace("file ", "");
-//                System.out.println(fileName);
+//                log.info(fileName);
                 files[i++] = new File(fileName);
             }
             Arrays.sort(files, new FileComparator());
             br.close();
             for (File file : files) {
-                System.out.println(file.getName());
+                log.info(file.getName());
             }
         } catch (Exception e) {
             e.printStackTrace();

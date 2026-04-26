@@ -34,34 +34,71 @@ public class Watchlater {
     private static void drainNetworkLogs(WebDriver webDriver, StringBuilder sb) {
         try {
             LogEntries logs = webDriver.manage().logs().get(LogType.PERFORMANCE);
+            int entryCount = 0;
             for (LogEntry entry : logs) {
-                if (entry.getLevel() == Level.INFO && entry.getMessage() != null) {
-                    JSONObject msg = JSON.parseObject(entry.getMessage());
-                    JSONObject message = msg.getJSONObject("message");
-                    if (message != null && "Network".equals(message.getString("source"))) {
-                        JSONObject params = message.getJSONObject("params");
-                        if (params != null) {
-                            JSONObject simplified = new JSONObject();
-                            simplified.put("method", message.getString("method"));
-                            simplified.put("type", params.getString("type"));
-                            simplified.put("url", params.getString("request") != null
-                                    ? params.getJSONObject("request").getString("url")
-                                    : params.getString("documentURL"));
-                            simplified.put("timestamp", entry.getTimestamp());
-                            JSONObject response = params.getJSONObject("response");
-                            if (response != null) {
-                                simplified.put("status", response.getInteger("status"));
-                                simplified.put("statusText", response.getString("statusText"));
-                                simplified.put("mimeType", response.getString("mimeType"));
-                                simplified.put("headers", response.getJSONObject("headers"));
-                            }
-                            sb.append(simplified.toJSONString()).append("\n");
-                        }
+                entryCount++;
+                String msg = entry.getMessage();
+                if (msg == null) {
+                    log.debug("[PERF_DIAG] entry#{} level={} msg=null", entryCount, entry.getLevel());
+                    continue;
+                }
+                // 诊断：打印前 3 条原始消息的 level 和 source
+                if (entryCount <= 3) {
+                    try {
+                        JSONObject raw = JSON.parseObject(msg);
+                        String source = raw.containsKey("message") ? raw.getJSONObject("message").getString("source") : "N/A";
+                        log.info("[PERF_DIAG] entry#{} level={} source={} method={}",
+                                entryCount, entry.getLevel(), source,
+                                raw.containsKey("message") ? raw.getJSONObject("message").getString("method") : "N/A");
+                    } catch (Exception e) {
+                        log.info("[PERF_DIAG] entry#{} level={} parse_error={}", entryCount, entry.getLevel(), e.getMessage());
                     }
                 }
+
+                // Performance 日志的 message 中没有 source 字段（source 是 Console 日志才有的），
+                // 需要通过 method 前缀 "Network." 来判断是否为 Network 事件
+                JSONObject msgObj = JSON.parseObject(msg);
+                JSONObject message = msgObj.getJSONObject("message");
+                if (message == null) {
+                    continue;
+                }
+                String method = message.getString("method");
+                if (method == null || !method.startsWith("Network.")) {
+                    continue;
+                }
+                JSONObject params = message.getJSONObject("params");
+                if (params == null) {
+                    continue;
+                }
+                JSONObject simplified = new JSONObject();
+                simplified.put("method", message.getString("method"));
+                simplified.put("type", params.getString("type"));
+                String url = params.getString("documentURL");
+                JSONObject req = params.getJSONObject("request");
+                if (req != null && req.getString("url") != null) {
+                    url = req.getString("url");
+                }
+                if (url == null) {
+                    url = params.getString("redirectResponse") != null
+                            ? params.getJSONObject("redirectResponse").getString("url")
+                            : "";
+                }
+                simplified.put("url", url);
+                simplified.put("timestamp", entry.getTimestamp());
+                JSONObject response = params.getJSONObject("response");
+                if (response != null) {
+                    simplified.put("status", response.getInteger("status"));
+                    simplified.put("statusText", response.getString("statusText"));
+                    simplified.put("mimeType", response.getString("mimeType"));
+                }
+                sb.append(simplified.toJSONString()).append("\n");
             }
+            log.info("[PERF_DIAG] drainNetworkLogs: total_entries={} extracted_urls={} (sample: {})",
+                    entryCount, sb.toString().split("\n").length,
+                    sb.length() > 0 ? sb.toString().substring(0, Math.min(200, sb.length())) : "NONE");
         } catch (Exception e) {
-            log.debug("drainNetworkLogs 异常: {}", e.getMessage());
+            log.warn("[PERF_DIAG] drainNetworkLogs 异常: {}: {}", e.getClass().getSimpleName(), e.getMessage());
+            e.printStackTrace();
         }
     }
 

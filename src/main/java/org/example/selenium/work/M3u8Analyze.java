@@ -2,6 +2,7 @@ package org.example.selenium.work;
 
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
@@ -87,7 +88,7 @@ public class M3u8Analyze {
 
             if (url.contains(FileEnums.M3U8_MASTER_FILE_NAME)) {
 
-                HttpUtil.downloadFile(url, m3U8Info.getCacheFilePath() + "/master.m3u8");
+                downloadFileWithReferer(url, m3U8Info.getCacheFilePath() + "/master.m3u8", m3U8Info.getVideoUrl());
                 m3U8Info.setMasterUrl(url);
                 log.info(url);
 
@@ -102,7 +103,7 @@ public class M3u8Analyze {
 
             } else if (url.contains(FileEnums.M3U8_FILE_EXTENSION_NAME)) {
 
-                HttpUtil.downloadFile(url, m3U8Info.getCacheFilePath());
+                downloadFileWithReferer(url, m3U8Info.getCacheFilePath(), m3U8Info.getVideoUrl());
 
                 String urlPrex = UrlAnalysisUtils.getUrlPrex(url, FileEnums.M3U8_INDEX_FILE_NAME_PREX);
                 m3U8Info.setUrlPrex(urlPrex);
@@ -140,13 +141,28 @@ public class M3u8Analyze {
                 log.info("M3u8ItemFileName:\t" + urlInfo.getFileName());
 
                 String fileNamePath = m3U8Info.getCacheFilePath() + FileEnums.FILE_PATH_SEPARATOR + urlInfo.getFileName();
-                HttpUtil.downloadFile(urlNew, fileNamePath);
+                downloadFileWithReferer(urlNew, fileNamePath, m3U8Info.getVideoUrl());
                 log.info(urlNew);
 
                 isDownload = true;
             }
         }
         reader.close();
+    }
+
+    /**
+     * 携带 Referer 头下载文件（绕过 CDN 防盗链）
+     * @param url 下载地址
+     * @param destPath 本地保存路径
+     * @param referer Referer 来源（一般为视频页面 URL）
+     */
+    private static void downloadFileWithReferer(String url, String destPath, String referer) {
+        HttpRequest.get(url)
+                .header("Referer", referer)
+                .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                .timeout(30000)
+                .execute()
+                .writeBody(new File(destPath));
     }
 
     public static void downloadM3u8TS(M3U8Info m3U8Info) throws Exception {
@@ -175,12 +191,12 @@ public class M3u8Analyze {
                     String url = urlPrex + line;
 
                     try {
-                        HttpUtil.downloadFile(url, tsFilePath);
+                        downloadFileWithReferer(url, tsFilePath, m3U8Info.getVideoUrl());
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        log.warn("下载 TS 失败: {} - {}", url, e.getMessage());
                     }
 
-                    log.info(line);
+                    log.info(url);
                 } else if (!line.startsWith("#") && line.contains(FileEnums.VIDEO_FILE_EXTENSION_NAME)) {
 
                     String url = urlPrex + line;
@@ -189,12 +205,12 @@ public class M3u8Analyze {
                     }
 
                     try {
-                        HttpUtil.downloadFile(url, tsFilePath);
+                        downloadFileWithReferer(url, tsFilePath, m3U8Info.getVideoUrl());
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        log.warn("下载 video 失败: {} - {}", url, e.getMessage());
                     }
 
-                    log.info(line);
+                    log.info(url);
                 }
 
             }

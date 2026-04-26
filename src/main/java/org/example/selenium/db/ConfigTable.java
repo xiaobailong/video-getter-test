@@ -156,7 +156,7 @@ public class ConfigTable extends BaseDB {
 
     public static void main(String[] args) {
 //        ConfigTable.createTable();
-//        System.out.println(ConfigTable.queryValue("pageUrlTemp"));
+//        log.info(ConfigTable.queryValue("pageUrlTemp"));
         
         // Example: Set download method to 'cococut' or 'original'
         if (args.length > 0) {
@@ -171,7 +171,7 @@ public class ConfigTable extends BaseDB {
                         String update_time = new DateTime().toString(DateTimeFormatEnum.DATE_TIME);
                         String sql = String.format("update config set value='%s', update_time='%s' where key='downloadMethod'", method, update_time);
                         statement.executeUpdate(sql);
-                        System.out.println("Download method set to: " + method);
+                        log.info("Download method set to: " + method);
                     } catch (SQLException e) {
                         e.printStackTrace(System.err);
                     } finally {
@@ -180,13 +180,13 @@ public class ConfigTable extends BaseDB {
                 } else {
                     // Insert new setting
                     insert("downloadMethod", method);
-                    System.out.println("Download method set to: " + method);
+                    log.info("Download method set to: " + method);
                 }
             } else {
-                System.out.println("Invalid download method. Use 'cococut' or 'original'");
+                log.info("Invalid download method. Use 'cococut' or 'original'");
             }
         } else {
-            System.out.println("Current download method: " + queryValue("downloadMethod"));
+            log.info("Current download method: " + queryValue("downloadMethod"));
         }
     }
 }

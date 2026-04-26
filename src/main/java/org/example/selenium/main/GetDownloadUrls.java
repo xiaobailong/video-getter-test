@@ -2,12 +2,15 @@ package org.example.selenium.main;
 
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.io.FileUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.example.selenium.db.PageHistoryTable;
 import org.example.selenium.enums.DateTimeFormatEnum;
 import org.example.selenium.enums.FileEnums;
 
 import java.util.List;
 
+
+@Slf4j
 public class GetDownloadUrls {
 
     public static void main(String[] args) {
@@ -22,7 +25,7 @@ public class GetDownloadUrls {
             if (PageHistoryTable.isExist(line)) {
                 continue;
             }
-            System.out.println(line);
+            log.info(line);
         }
     }
 
@@ -34,7 +37,7 @@ public class GetDownloadUrls {
                 continue;
             }
             PageHistoryTable.insert(line, "");
-            System.out.println(line);
+            log.info(line);
         }
     }
 }
