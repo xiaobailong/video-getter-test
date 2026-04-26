@@ -28,22 +28,19 @@ import java.util.logging.Level;
 public class Watchlater {
 
     /**
-     * 从 Chrome Performance 日志中提取 Network 请求条目
+     * 一次性捕获当前 Performance 日志缓冲区中的 Network 请求
      * 返回 network 事件的 JSON 字符串（每条一行）
      */
-    private static String captureNetworkLogs(WebDriver webDriver) {
-        StringBuilder sb = new StringBuilder();
+    private static void drainNetworkLogs(WebDriver webDriver, StringBuilder sb) {
         try {
             LogEntries logs = webDriver.manage().logs().get(LogType.PERFORMANCE);
             for (LogEntry entry : logs) {
-                // 只关心 Network 相关事件
                 if (entry.getLevel() == Level.INFO && entry.getMessage() != null) {
                     JSONObject msg = JSON.parseObject(entry.getMessage());
                     JSONObject message = msg.getJSONObject("message");
                     if (message != null && "Network".equals(message.getString("source"))) {
                         JSONObject params = message.getJSONObject("params");
                         if (params != null) {
-                            // 构造一个类似 HAR entry 的结构，方便下游复用
                             JSONObject simplified = new JSONObject();
                             simplified.put("method", message.getString("method"));
                             simplified.put("type", params.getString("type"));
@@ -64,9 +61,8 @@ public class Watchlater {
                 }
             }
         } catch (Exception e) {
-            log.warn("获取 Performance 日志失败: {}", e.getMessage());
+            log.debug("drainNetworkLogs 异常: {}", e.getMessage());
         }
-        return sb.toString();
     }
 
     public static void getVideoList(WebDriver webDriver) throws Exception {
@@ -162,36 +158,20 @@ public class Watchlater {
 
         Thread.sleep(12 * 1000);
 
-        // 处理 Pornhub 首页年龄确认弹窗（accessAgeDisclaimerPH cookie 控制）
-        // 弹窗结构: #ageDisclaimerMainBG (全屏黑遮罩 z-index:1000001) + #js-ageDisclaimerModal (.js-closeAgeModal 按钮)
         log.info("page title: {}", webDriver.getTitle());
         log.info("page url: {}", webDriver.getCurrentUrl());
 
-        for (int i = 0; i < 10; i++) {
-            try {
-                String result = (String) ((JavascriptExecutor) webDriver).executeScript(
-                        "var found = false;" +
-                        "/* 移除全屏年龄确认弹窗 */" +
-                        "var bg = document.getElementById('ageDisclaimerMainBG'); if(bg) { bg.remove(); found = true; }" +
-                        "var overlay = document.getElementById('ageDisclaimerOverlay'); if(overlay) { overlay.remove(); found = true; }" +
-                        "var modal = document.getElementById('js-ageDisclaimerModal'); if(modal) { modal.remove(); found = true; }" +
-                        "/* 解除 body 滚动锁定 */" +
-                        "document.body.style.overflow = 'auto';" +
-                        "document.documentElement.style.overflow = 'auto';" +
-                        "return found ? 'removed' : 'not_found';"
-                );
-                if ("removed".equals(result)) {
-                    log.info("removed age disclaimer modal");
-                    Thread.sleep(3000);
-                    break;
-                }
-            } catch (Exception e) {
-                log.debug("age disclaimer removal attempt {}: {}", i + 1, e.getMessage());
-            }
-            Thread.sleep(1000);
+        // === 改用 Chrome Performance 日志替代 BrowserMobProxy HAR ===
+        // 在等待期间定期 Drain 缓冲区，避免环形缓冲区溢出导致事件丢失
+        StringBuilder networkLogsSb = new StringBuilder();
+        long waitStart = System.currentTimeMillis();
+        long waitDuration = 30 * 1000L;
+        while (System.currentTimeMillis() - waitStart < waitDuration) {
+            drainNetworkLogs(webDriver, networkLogsSb);
+            Thread.sleep(3000);
         }
-
-        Thread.sleep(30 * 1000);
+        // 最后一次 Drain
+        drainNetworkLogs(webDriver, networkLogsSb);
 
         String cacheFilePath = m3U8Info.getCacheFilePath();
         String logFilePath = cacheFilePath + FileEnums.FILE_PATH_SEPARATOR + title + FileEnums.TXT_FILE_EXTENSION_NAME;
@@ -199,13 +179,12 @@ public class Watchlater {
         // 确保日志文件所在目录存在
         FileIOUtils.ensureParentDirExists(logFilePath);
 
-        // === 改用 Chrome Performance 日志替代 BrowserMobProxy HAR ===
-        String networkLogs = captureNetworkLogs(webDriver);
+        // 写入日志文件
+        String networkLogs = networkLogsSb.toString();
         if (networkLogs.isEmpty()) {
             log.warn("Performance 日志未捕获到 Network 事件 for: {}", title);
             FileIOUtils.outputBrowseLog("{\"note\":\"NO_NETWORK_EVENTS_CAPTURED\"}", logFilePath);
         } else {
-            // 按行分割并逐条写入（兼容原有的逐条写入逻辑）
             String[] lines = networkLogs.split("\n");
             for (String line : lines) {
                 if (!line.trim().isEmpty()) {
