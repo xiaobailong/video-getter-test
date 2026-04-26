@@ -12,6 +12,7 @@ import org.example.selenium.entity.M3U8Info;
 import org.example.selenium.entity.VideoInfo;
 import org.example.selenium.enums.DateTimeFormatEnum;
 import org.example.selenium.enums.FileEnums;
+import org.example.selenium.utils.AdBlocker;
 import org.example.selenium.utils.FileIOUtils;
 import org.example.selenium.utils.VideoUtils;
 import org.example.selenium.work.M3u8Analyze;
@@ -100,6 +101,7 @@ public class Watchlater {
 
         Thread.sleep(3 * 1000);
 
+        AdBlocker.apply(webDriver);
         webDriver.get(ConfigTable.queryValue("watchlater"));
 
         Thread.sleep(3 * 1000);
@@ -193,6 +195,7 @@ public class Watchlater {
 
         Thread.sleep(3 * 1000);
 
+        AdBlocker.apply(webDriver);
         webDriver.get(url);
 
         Thread.sleep(12 * 1000);
@@ -233,6 +236,7 @@ public class Watchlater {
             }
         }
 
+        AdBlocker.apply(webDriver);
         webDriver.get(ConfigTable.queryValue("homeUrl"));
 
         m3U8Info.setLogFilePath(logFilePath);
