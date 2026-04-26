@@ -20,7 +20,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
@@ -185,7 +187,56 @@ public class M3u8Analyze {
     }
 
     /**
-     * 3 线程并发下载 TS 段，每个线程承接约 1/3 的任务
+     * 探测网速，返回最优并发线程数
+     * <p>下载前 N 个片段测量平均耗时，根据耗时决定线程数:</p>
+     * < 300ms → 8 线程, < 800ms → 6 线程, < 2000ms → 4 线程, < 5000ms → 2 线程, 否则 1 线程
+     * @return 长度为2的int数组: [0]=threadCount, [1]=probeCount(已下载的探测片段数，后续需跳过)
+     */
+    private static int[] probeNetworkSpeed(M3U8Info m3U8Info, List<DownloadTask> allTasks, int total) {
+        int probeCount = Math.min(5, total);
+        if (total <= probeCount) {
+            return new int[]{1, probeCount};
+        }
+
+        List<Long> probeTimes = new ArrayList<>();
+
+        for (int i = 0; i < probeCount; i++) {
+            DownloadTask task = allTasks.get(i);
+            long start = System.currentTimeMillis();
+            try {
+                downloadFileWithReferer(task.url, task.destPath, m3U8Info.getVideoUrl());
+                long elapsed = System.currentTimeMillis() - start;
+                probeTimes.add(elapsed);
+                log.info("[网速探测] [{}/{}] 耗时 {} ms", i + 1, probeCount, elapsed);
+            } catch (Exception e) {
+                probeTimes.add(30000L);
+                log.warn("[网速探测] [{}/{}] 失败: {}", i + 1, probeCount, e.getMessage());
+            }
+        }
+
+        double avgTime = probeTimes.stream().mapToLong(Long::longValue).average().orElse(5000);
+        log.info("网速探测完成: 平均下载耗时 {} ms/段", String.format("%.0f", avgTime));
+
+        int threadCount;
+        if (avgTime < 300) {
+            threadCount = 8;
+        } else if (avgTime < 800) {
+            threadCount = 6;
+        } else if (avgTime < 2000) {
+            threadCount = 4;
+        } else if (avgTime < 5000) {
+            threadCount = 2;
+        } else {
+            threadCount = 1;
+        }
+
+        log.info("根据网速决定使用 {} 线程并发下载", threadCount);
+        return new int[]{threadCount, probeCount};
+    }
+
+    /**
+     * 自适应并发下载 TS 段
+     * <p>先探测网速决定线程数，再用线程池并发下载，每个片段失败重试3次</p>
      */
     public static void downloadM3u8TS(M3U8Info m3U8Info) throws Exception {
 
@@ -234,61 +285,56 @@ public class M3u8Analyze {
         }
 
         int total = allTasks.size();
-        log.info("总 TS 段数: {}, 使用 3 线程并发下载", total);
+        if (total == 0) {
+            log.info("没有发现 TS 片段，跳过下载");
+            return;
+        }
 
-        // 2. 将任务均分给 3 个线程
-        int threadCount = 3;
-        CountDownLatch latch = new CountDownLatch(threadCount);
-        AtomicInteger successCount = new AtomicInteger(0);
+        // 2. 探测网速，确定最佳并发线程数及已下载的探测片段数
+        int[] probeResult = probeNetworkSpeed(m3U8Info, allTasks, total);
+        int threadCount = probeResult[0];
+        int probeCount = probeResult[1];
+        log.info("总 TS 段数: {}, 使用 {} 线程并发下载 (已探测 {} 段, 跳过)", total, threadCount, probeCount);
+
+        // 3. 使用线程池并发下载剩余片段
+        AtomicInteger successCount = new AtomicInteger(probeCount); // 探测阶段已成功下载 probeCount 个
         AtomicInteger failCount = new AtomicInteger(0);
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
 
-        for (int t = 0; t < threadCount; t++) {
-            int start = t * total / threadCount;
-            int end = (t + 1) * total / threadCount;
-            if (t == threadCount - 1) {
-                end = total; // 最后一个线程处理剩余部分
-            }
-            List<DownloadTask> subTasks = allTasks.subList(start, end);
-            final int threadId = t + 1;
-            final int s = start;
-            final int e = end;
-
-            new Thread(() -> {
-                log.info("线程{} 启动: 负责第 {}-{} 段 (共 {} 段)", threadId, s + 1, e, subTasks.size());
-                for (DownloadTask task : subTasks) {
-                    boolean success = false;
-                    for (int retry = 1; retry <= 3; retry++) {
-                        try {
-                            downloadFileWithReferer(task.url, task.destPath, m3U8Info.getVideoUrl());
-                            success = true;
-                            log.info("[线程{}][{}/{}] 下载成功: {}", threadId, task.index, total, task.url);
-                            break;
-                        } catch (Exception exception) {
-                            log.warn("[线程{}][{}/{}] 第{}次下载失败: {} - {}", threadId, task.index, total, retry, task.url, exception.getMessage());
-                            if (retry < 3) {
-                                // 重试前短暂等待 2 秒
-                                try {
-                                    Thread.sleep(2000);
-                                } catch (InterruptedException ie) {
-                                    Thread.currentThread().interrupt();
-                                }
+        for (int i = probeCount; i < total; i++) {
+            DownloadTask task = allTasks.get(i);
+            executor.submit(() -> {
+                boolean success = false;
+                for (int retry = 1; retry <= 3; retry++) {
+                    try {
+                        downloadFileWithReferer(task.url, task.destPath, m3U8Info.getVideoUrl());
+                        success = true;
+                        log.info("[下载线程][{}/{}] 下载成功: {}", task.index, total, task.url);
+                        break;
+                    } catch (Exception exception) {
+                        log.warn("[下载线程][{}/{}] 第{}次下载失败: {} - {}", task.index, total, retry, task.url, exception.getMessage());
+                        if (retry < 3) {
+                            try {
+                                Thread.sleep(2000);
+                            } catch (InterruptedException ie) {
+                                Thread.currentThread().interrupt();
                             }
                         }
                     }
-                    if (success) {
-                        successCount.incrementAndGet();
-                    } else {
-                        failCount.incrementAndGet();
-                        log.error("[线程{}][{}/{}] 重试3次后仍然失败: {}", threadId, task.index, total, task.url);
-                    }
                 }
-                log.info("线程{} 完成", threadId);
-                latch.countDown();
-            }, "ts-download-" + threadId).start();
+                if (success) {
+                    successCount.incrementAndGet();
+                } else {
+                    failCount.incrementAndGet();
+                    log.error("[下载线程][{}/{}] 重试3次后仍然失败: {}", task.index, total, task.url);
+                }
+            });
         }
 
-        // 3. 等待所有线程完成
-        latch.await();
+        executor.shutdown();
+        // 最多等待 1 小时
+        executor.awaitTermination(1, TimeUnit.HOURS);
+
         log.info("全部下载完成: 成功 {} / 失败 {} / 总计 {}", successCount.get(), failCount.get(), total);
     }
 }
