@@ -3,7 +3,6 @@ package org.example.selenium.work;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.http.HttpRequest;
-import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONWriter;

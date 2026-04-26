@@ -142,6 +142,8 @@ public class Watchlater {
         }
 
         int index = 0;
+        int refreshCheckInterval = 10; // 每处理 10 个视频检查一次 cookie
+        String homeUrl = ConfigTable.queryValue("homeUrl");
         for (VideoInfo videoInfo : videoInfos) {
             String title = videoInfo.getTitle().replaceAll("\\pP|\\pS|\\pC|\\pN|\\pZ", "");
             String href = videoInfo.getHref();
@@ -151,6 +153,12 @@ public class Watchlater {
             }
             if (PageHistoryTable.isExist(href)) {
                 continue;
+            }
+
+            // 每处理 refreshCheckInterval 个视频或出现异常时，检查 cookie 是否过期
+            if (index > 0 && index % refreshCheckInterval == 0) {
+                log.info("--------- 执行 cookie 有效性检查 (第 {} 个视频后) ---------", index);
+                Login.refreshLoginIfNeeded(webDriver, homeUrl);
             }
 
             log.info(index + FileEnums.FILE_PATH_SEPARATOR + videoInfos.size() + "\t" + title + "\t" + href);

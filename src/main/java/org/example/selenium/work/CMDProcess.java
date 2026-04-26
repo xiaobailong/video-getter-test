@@ -18,7 +18,14 @@ public class CMDProcess {
         Runtime runtime = Runtime.getRuntime();
 
         try {
-            String[] command = {"cmd", "/c", stmt};
+            // macOS 使用 /bin/sh -c，Windows 使用 cmd /c
+            String osName = System.getProperty("os.name").toLowerCase();
+            String[] command;
+            if (osName.contains("mac") || osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) {
+                command = new String[]{"/bin/sh", "-c", stmt};
+            } else {
+                command = new String[]{"cmd", "/c", stmt};
+            }
             Process process = runtime.exec(command);
 
             String errStr = consumeInputStream(process.getErrorStream());
@@ -27,16 +34,19 @@ public class CMDProcess {
             if (proc == 0) {
                 log.info("执行成功");
             } else {
-                System.err.println("执行失败" + errStr);
+                log.error("执行失败: {}", errStr);
             }
 
         } catch (Exception e) {
-            e.printStackTrace(System.err);
+            log.error("执行 ffmpeg 命令异常", e);
         }
     }
 
     private static String consumeInputStream(InputStream is) throws IOException {
-        BufferedReader br = new BufferedReader(new InputStreamReader(is, "GBK"));
+        // macOS 使用 UTF-8，Windows 使用 GBK
+        String osName = System.getProperty("os.name").toLowerCase();
+        String charset = osName.contains("mac") || osName.contains("nix") || osName.contains("nux") ? "UTF-8" : "GBK";
+        BufferedReader br = new BufferedReader(new InputStreamReader(is, charset));
         String s;
         StringBuilder sb = new StringBuilder();
         while ((s = br.readLine()) != null) {

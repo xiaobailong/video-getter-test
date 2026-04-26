@@ -204,4 +204,41 @@ public class Login {
 
         log.info("[Login] 登录流程完成");
     }
+
+    /**
+     * 检查当前是否仍处于登录状态，若 cookie 失效则重新登录并刷新数据库中的 cookie 信息
+     * <p>
+     * 在长时间循环爬取视频的过程中调用，确保 cookie 过期后能自动重新登录并更新数据库。
+     * </p>
+     * @param webDriver Chrome WebDriver
+     * @param homeUrl 首页 URL（用于导航回来）
+     * @throws Exception 异常
+     */
+    public static void refreshLoginIfNeeded(WebDriver webDriver, String homeUrl) throws Exception {
+        // 先导航到首页再检查（确保页面处于登录判断的域名）
+        webDriver.get(homeUrl);
+        Thread.sleep(3000);
+
+        if (isLoggedIn(webDriver)) {
+            log.debug("[Login] 登录状态有效，无需重新登录");
+            return;
+        }
+
+        log.warn("[Login] cookie 已过期，开始重新登录...");
+
+        // 尝试从数据库重新注入 cookie
+        boolean loaded = loadCookies(webDriver);
+        if (loaded) {
+            log.info("[Login] 重新注入 cookie 后登录有效，无需手动登录");
+            return;
+        }
+
+        // cookie 完全失效，手动重新登录
+        doLogin(webDriver);
+
+        // 保存新 cookie 到数据库（覆盖旧值）
+        saveCookies(webDriver);
+
+        log.info("[Login] 重新登录并刷新 cookie 完成");
+    }
 }
