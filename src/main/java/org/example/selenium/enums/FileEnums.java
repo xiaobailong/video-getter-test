@@ -2,7 +2,7 @@ package org.example.selenium.enums;
 
 public class FileEnums {
 
-    public static String SAVE_PATH = "D:/FTP/no";
+    public static String SAVE_PATH = "/Users/gaoqingyue/Downloads/FTP/no";
 
     public static String PATH_PREX = SAVE_PATH + "/cache";
 
@@ -30,5 +30,5 @@ public class FileEnums {
 
     public static String PROTOCOL = "http";
 
-    public static String FFMPEG_FILE_PATH = "D:/Tools/DevTools/base/ffmpeg-master-latest-win64-gpl/bin/ffmpeg.exe";
+    public static String FFMPEG_FILE_PATH = "/Users/gaoqingyue/WorkSpace/Tools/chromedriver/chromedriver-mac-x64-137/chromedriver";
 }

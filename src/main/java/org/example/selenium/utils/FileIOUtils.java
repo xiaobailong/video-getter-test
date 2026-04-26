@@ -7,6 +7,14 @@ import java.io.File;
 
 public class FileIOUtils {
 
+    public static void ensureParentDirExists(String filePath) {
+        File file = new File(filePath);
+        File parentDir = file.getParentFile();
+        if (parentDir != null && !parentDir.exists()) {
+            parentDir.mkdirs();
+        }
+    }
+
     public static void outputBrowseLog(String content, String logFilePathStr) throws Exception {
         File logFilePath = new File(logFilePathStr);
         if (!logFilePath.getParentFile().exists()) {

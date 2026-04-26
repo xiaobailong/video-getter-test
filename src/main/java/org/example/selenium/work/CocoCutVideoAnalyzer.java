@@ -3,16 +3,15 @@ package org.example.selenium.work;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONWriter;
 import lombok.extern.slf4j.Slf4j;
-import net.lightbody.bmp.core.har.HarEntry;
 import org.example.selenium.entity.M3U8Info;
 import org.example.selenium.enums.FileEnums;
 import org.example.selenium.utils.TextOutputUtil;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -57,14 +56,15 @@ public class CocoCutVideoAnalyzer {
     public static boolean analyzeNetworkTraffic(M3U8Info m3U8Info) throws Exception {
         log.info("Analyzing network traffic using CocoCut-like method");
 
-        BufferedReader reader = new BufferedReader(new FileReader(m3U8Info.getLogFilePath()));
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(new FileInputStream(m3U8Info.getLogFilePath()), StandardCharsets.UTF_8));
         String line;
         List<String> videoUrls = new ArrayList<>();
         List<String> m3u8Urls = new ArrayList<>();
 
         while ((line = reader.readLine()) != null) {
-            HarEntry harEntry = JSON.parseObject(line, HarEntry.class);
-            String url = harEntry.getRequest().getUrl();
+            JSONObject entry = JSON.parseObject(line);
+            String url = entry.getString("url");
 
             // Check if URL contains video extensions
             if (isVideoUrl(url)) {
@@ -184,7 +184,8 @@ public class CocoCutVideoAnalyzer {
      * Download TS files from m3u8 playlist
      */
     private static void downloadM3u8TS(M3U8Info m3U8Info, String m3u8FilePath) throws Exception {
-        BufferedReader reader = new BufferedReader(new FileReader(m3u8FilePath));
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(new FileInputStream(m3u8FilePath), StandardCharsets.UTF_8));
         String line;
 
         String tsFilePath = m3U8Info.getCacheFilePath() + FileEnums.FILE_PATH_SEPARATOR + FileEnums.TF_FILE_PATH_NAME;

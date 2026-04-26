@@ -9,6 +9,7 @@
             <!--<pattern>faint(%d{yyyy-MM-dd HH:mm:ss.SSS}) %highlight(%-5level) [%-40.40logger{10}] - %msg%n</pattern>-->
             <pattern>%white(%d{yyyy-MM-dd HH:mm:ss.SSS}) %highlight(%-5level) %magenta(%thread{10}) [%cyan(%-25.25logger{24})] - %boldWhite(%msg%n)
             </pattern>
+            <charset>UTF-8</charset>
         </encoder>
     </appender>
     <appender name="mainAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">

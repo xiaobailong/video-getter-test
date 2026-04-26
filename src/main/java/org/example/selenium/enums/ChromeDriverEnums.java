@@ -2,6 +2,6 @@ package org.example.selenium.enums;
 
 public class ChromeDriverEnums {
 
-    public static String Home = "D:/Tools/DevTools/Web/driver/chromedriver-win64/chromedriver.exe";
+    public static String Home = "/Users/gaoqingyue/WorkSpace/Tools/chromedriver/chromedriver-mac-x64/chromedriver";
 
 }

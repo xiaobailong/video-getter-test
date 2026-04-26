@@ -4,9 +4,9 @@ import cn.hutool.core.date.DateTime;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONWriter;
 import lombok.extern.slf4j.Slf4j;
-import net.lightbody.bmp.core.har.HarEntry;
 import org.example.selenium.db.PageHistoryTable;
 import org.example.selenium.entity.M3U8Info;
 import org.example.selenium.entity.UrlInfo;
@@ -16,6 +16,7 @@ import org.example.selenium.utils.UrlAnalysisUtils;
 import org.example.selenium.utils.TextOutputUtil;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 @Slf4j
 public class M3u8Analyze {
@@ -61,7 +62,8 @@ public class M3u8Analyze {
 
     public static void downloadM3u8(M3U8Info m3U8Info) throws Exception {
 
-        BufferedReader reader = new BufferedReader(new FileReader(m3U8Info.getLogFilePath()));
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(new FileInputStream(m3U8Info.getLogFilePath()), StandardCharsets.UTF_8));
 
         String line;
         boolean isDownload = false;
@@ -70,8 +72,12 @@ public class M3u8Analyze {
 
 //            log.info(line);
 
-            HarEntry harEntry = JSON.parseObject(line, HarEntry.class);
-            String url = harEntry.getRequest().getUrl();
+            // 解析 CDP Performance Log 的 JSON（摒弃 BMP 的 HarEntry）
+            JSONObject entry = JSON.parseObject(line);
+            String url = entry.getString("url");
+            if (url == null) {
+                continue;
+            }
 //            log.info("url: " + url);
 
             if (!url.contains("mp4")) {
@@ -96,7 +102,7 @@ public class M3u8Analyze {
 
             } else if (url.contains(FileEnums.M3U8_FILE_EXTENSION_NAME)) {
 
-                HttpUtil.downloadFile(harEntry.getRequest().getUrl(), m3U8Info.getCacheFilePath());
+                HttpUtil.downloadFile(url, m3U8Info.getCacheFilePath());
 
                 String urlPrex = UrlAnalysisUtils.getUrlPrex(url, FileEnums.M3U8_INDEX_FILE_NAME_PREX);
                 m3U8Info.setUrlPrex(urlPrex);
@@ -111,7 +117,8 @@ public class M3u8Analyze {
 
     public static void downloadM3u8Item(M3U8Info m3U8Info) throws Exception {
         String masterFilePath = m3U8Info.getCacheFilePath() + FileEnums.FILE_PATH_SEPARATOR + FileEnums.M3U8_MASTER_FILE_NAME;
-        BufferedReader reader = new BufferedReader(new FileReader(masterFilePath));
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(new FileInputStream(masterFilePath), StandardCharsets.UTF_8));
 
         String line;
         boolean isDownload = false;
@@ -148,7 +155,8 @@ public class M3u8Analyze {
             String fileNamePath = m3U8Info.getCacheFilePath() + FileEnums.FILE_PATH_SEPARATOR + fileItem;
             log.info(fileNamePath);
 
-            BufferedReader reader = new BufferedReader(new FileReader(fileNamePath));
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(new FileInputStream(fileNamePath), StandardCharsets.UTF_8));
 
             String line;
 

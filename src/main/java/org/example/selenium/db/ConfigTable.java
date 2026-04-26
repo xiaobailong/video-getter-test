@@ -104,6 +104,29 @@ public class ConfigTable extends BaseDB {
         return null;
     }
 
+    /**
+     * 写入配置：key 已存在则 update，不存在则 insert
+     */
+    public static void upsert(String key, String value) {
+        if (isExist(key)) {
+            Connection connection = getConnection();
+            try {
+                Statement statement = connection.createStatement();
+                statement.setQueryTimeout(30);
+                String update_time = new DateTime().toString(DateTimeFormatEnum.DATE_TIME);
+                String sql = String.format("update config set value='%s', update_time='%s' where key='%s'",
+                        value.replace("'", "''"), update_time, key);
+                statement.executeUpdate(sql);
+            } catch (SQLException e) {
+                e.printStackTrace(System.err);
+            } finally {
+                close(connection);
+            }
+        } else {
+            insert(key, value);
+        }
+    }
+
     public static boolean isExist(String key) {
         Connection connection = getConnection();
         try {
