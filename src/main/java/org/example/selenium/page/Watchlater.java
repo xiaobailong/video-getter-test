@@ -22,37 +22,21 @@ import org.openqa.selenium.logging.LogType;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
 
 @Slf4j
 public class Watchlater {
 
     /**
      * 一次性捕获当前 Performance 日志缓冲区中的 Network 请求
-     * 返回 network 事件的 JSON 字符串（每条一行）
+     * 返回 network 事件的 JSON 字符串（每条一行），并提取 TS 段 URL 到 m3U8Info
      */
-    private static void drainNetworkLogs(WebDriver webDriver, StringBuilder sb) {
+    private static void drainNetworkLogs(WebDriver webDriver, StringBuilder sb, M3U8Info m3U8Info) {
         try {
             LogEntries logs = webDriver.manage().logs().get(LogType.PERFORMANCE);
-            int entryCount = 0;
             for (LogEntry entry : logs) {
-                entryCount++;
                 String msg = entry.getMessage();
                 if (msg == null) {
-                    log.debug("[PERF_DIAG] entry#{} level={} msg=null", entryCount, entry.getLevel());
                     continue;
-                }
-                // 诊断：打印前 3 条原始消息的 level 和 source
-                if (entryCount <= 3) {
-                    try {
-                        JSONObject raw = JSON.parseObject(msg);
-                        String source = raw.containsKey("message") ? raw.getJSONObject("message").getString("source") : "N/A";
-                        log.info("[PERF_DIAG] entry#{} level={} source={} method={}",
-                                entryCount, entry.getLevel(), source,
-                                raw.containsKey("message") ? raw.getJSONObject("message").getString("method") : "N/A");
-                    } catch (Exception e) {
-                        log.info("[PERF_DIAG] entry#{} level={} parse_error={}", entryCount, entry.getLevel(), e.getMessage());
-                    }
                 }
 
                 // Performance 日志的 message 中没有 source 字段（source 是 Console 日志才有的），
@@ -70,9 +54,6 @@ public class Watchlater {
                 if (params == null) {
                     continue;
                 }
-                JSONObject simplified = new JSONObject();
-                simplified.put("method", message.getString("method"));
-                simplified.put("type", params.getString("type"));
                 String url = params.getString("documentURL");
                 JSONObject req = params.getJSONObject("request");
                 if (req != null && req.getString("url") != null) {
@@ -83,6 +64,23 @@ public class Watchlater {
                             ? params.getJSONObject("redirectResponse").getString("url")
                             : "";
                 }
+                if (url == null || url.isEmpty()) {
+                    continue;
+                }
+
+                // 提取浏览器实际请求的 TS 段 URL（含 CDN 有效签名 validfrom/validto/hash）
+                if (url.contains(".ts") && url.contains("validfrom=")) {
+                    int lastSlash = url.lastIndexOf('/');
+                    int qMark = url.indexOf('?', lastSlash);
+                    String tsFileName = (qMark > lastSlash) ? url.substring(lastSlash + 1, qMark) : url.substring(lastSlash + 1);
+                    if (m3U8Info != null) {
+                        m3U8Info.getCapturedTsUrls().put(tsFileName, url);
+                    }
+                }
+
+                JSONObject simplified = new JSONObject();
+                simplified.put("method", message.getString("method"));
+                simplified.put("type", params.getString("type"));
                 simplified.put("url", url);
                 simplified.put("timestamp", entry.getTimestamp());
                 JSONObject response = params.getJSONObject("response");
@@ -93,12 +91,8 @@ public class Watchlater {
                 }
                 sb.append(simplified.toJSONString()).append("\n");
             }
-            log.info("[PERF_DIAG] drainNetworkLogs: total_entries={} extracted_urls={} (sample: {})",
-                    entryCount, sb.toString().split("\n").length,
-                    sb.length() > 0 ? sb.toString().substring(0, Math.min(200, sb.length())) : "NONE");
         } catch (Exception e) {
-            log.warn("[PERF_DIAG] drainNetworkLogs 异常: {}: {}", e.getClass().getSimpleName(), e.getMessage());
-            e.printStackTrace();
+            log.warn("drainNetworkLogs 异常: {}: {}", e.getClass().getSimpleName(), e.getMessage());
         }
     }
 
@@ -200,15 +194,16 @@ public class Watchlater {
 
         // === 改用 Chrome Performance 日志替代 BrowserMobProxy HAR ===
         // 在等待期间定期 Drain 缓冲区，避免环形缓冲区溢出导致事件丢失
+        // 同时捕获浏览器实际请求的 TS 段 URL（含 CDN 有效签名）
         StringBuilder networkLogsSb = new StringBuilder();
         long waitStart = System.currentTimeMillis();
         long waitDuration = 30 * 1000L;
         while (System.currentTimeMillis() - waitStart < waitDuration) {
-            drainNetworkLogs(webDriver, networkLogsSb);
+            drainNetworkLogs(webDriver, networkLogsSb, m3U8Info);
             Thread.sleep(3000);
         }
         // 最后一次 Drain
-        drainNetworkLogs(webDriver, networkLogsSb);
+        drainNetworkLogs(webDriver, networkLogsSb, m3U8Info);
 
         String cacheFilePath = m3U8Info.getCacheFilePath();
         String logFilePath = cacheFilePath + FileEnums.FILE_PATH_SEPARATOR + title + FileEnums.TXT_FILE_EXTENSION_NAME;
@@ -226,7 +221,6 @@ public class Watchlater {
             for (String line : lines) {
                 if (!line.trim().isEmpty()) {
                     FileIOUtils.outputBrowseLog(line, logFilePath);
-                    log.info(line);
                 }
             }
         }
@@ -235,15 +229,8 @@ public class Watchlater {
 
         m3U8Info.setLogFilePath(logFilePath);
 
-        // Get download method from config (default to original if not set)
-//        String downloadMethod = ConfigTable.queryValue("downloadMethod");
-//        if ("cococut".equalsIgnoreCase(downloadMethod)) {
-//            log.info("Using CocoCut method to download video");
-//            CocoCutVideoAnalyzer.downloadVideo(m3U8Info);
-//        } else {
-            log.info("Using original method to download video");
-            M3u8Analyze.downloadVideo(m3U8Info);
-//        }
+        log.info("Using original method to download video");
+        M3u8Analyze.downloadVideo(m3U8Info);
     }
 
 

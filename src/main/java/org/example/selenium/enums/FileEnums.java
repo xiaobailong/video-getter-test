@@ -30,5 +30,5 @@ public class FileEnums {
 
     public static String PROTOCOL = "http";
 
-    public static String FFMPEG_FILE_PATH = "/Users/gaoqingyue/WorkSpace/Tools/chromedriver/chromedriver-mac-x64-137/chromedriver";
+    public static String FFMPEG_FILE_PATH = "/Users/gaoqingyue/WorkSpace/Tools/ffmpeg/ffmpeg";
 }

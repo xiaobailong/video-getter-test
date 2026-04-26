@@ -18,6 +18,11 @@ import org.example.selenium.utils.TextOutputUtil;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 public class M3u8Analyze {
@@ -165,57 +170,109 @@ public class M3u8Analyze {
                 .writeBody(new File(destPath));
     }
 
+    /**
+     * TS 下载任务
+     */
+    private static class DownloadTask {
+        String url;
+        String destPath;
+        int index;
+
+        DownloadTask(String url, String destPath, int index) {
+            this.url = url;
+            this.destPath = destPath;
+            this.index = index;
+        }
+    }
+
+    /**
+     * 3 线程并发下载 TS 段，每个线程承接约 1/3 的任务
+     */
     public static void downloadM3u8TS(M3U8Info m3U8Info) throws Exception {
 
+        String tsFilePath = m3U8Info.getCacheFilePath() + FileEnums.FILE_PATH_SEPARATOR + FileEnums.TF_FILE_PATH_NAME;
+        File tsFile = new File(tsFilePath);
+        if (!tsFile.exists()) {
+            tsFile.mkdirs();
+        }
+
+        String urlPrex = m3U8Info.getUrlPrex();
+        Map<String, String> capturedTsUrls = m3U8Info.getCapturedTsUrls();
+
+        // 1. 构建所有下载任务列表
+        List<DownloadTask> allTasks = new ArrayList<>();
         for (String fileItem : m3U8Info.getM3u8ItemFileNames()) {
             String fileNamePath = m3U8Info.getCacheFilePath() + FileEnums.FILE_PATH_SEPARATOR + fileItem;
-            log.info(fileNamePath);
-
             BufferedReader reader = new BufferedReader(
                     new InputStreamReader(new FileInputStream(fileNamePath), StandardCharsets.UTF_8));
-
             String line;
-
-            String tsFilePath = m3U8Info.getCacheFilePath() + FileEnums.FILE_PATH_SEPARATOR + FileEnums.TF_FILE_PATH_NAME;
-            File tsFile = new File(tsFilePath);
-            if (!tsFile.exists()) {
-                tsFile.mkdirs();
-            }
-
-            String urlPrex = m3U8Info.getUrlPrex();
-            log.info("urlPrex:\t" + urlPrex);
-
             while ((line = reader.readLine()) != null) {
                 if (line.contains(FileEnums.TF_FILE_EXTENSION_NAME)) {
-
-                    String url = urlPrex + line;
-
-                    try {
-                        downloadFileWithReferer(url, tsFilePath, m3U8Info.getVideoUrl());
-                    } catch (Exception e) {
-                        log.warn("下载 TS 失败: {} - {}", url, e.getMessage());
+                    String tsFileName = line;
+                    int qMark = line.indexOf('?');
+                    if (qMark > 0) {
+                        tsFileName = line.substring(0, qMark);
                     }
-
-                    log.info(url);
+                    String url = capturedTsUrls.containsKey(tsFileName) ? capturedTsUrls.get(tsFileName) : urlPrex + line;
+                    allTasks.add(new DownloadTask(url, tsFilePath, allTasks.size() + 1));
                 } else if (!line.startsWith("#") && line.contains(FileEnums.VIDEO_FILE_EXTENSION_NAME)) {
-
                     String url = urlPrex + line;
                     if (line.startsWith("http")) {
                         url = line;
                     }
-
-                    try {
-                        downloadFileWithReferer(url, tsFilePath, m3U8Info.getVideoUrl());
-                    } catch (Exception e) {
-                        log.warn("下载 video 失败: {} - {}", url, e.getMessage());
+                    String videoFileName = line;
+                    int qMark = line.indexOf('?');
+                    if (qMark > 0) {
+                        videoFileName = line.substring(0, qMark);
                     }
-
-                    log.info(url);
+                    if (capturedTsUrls.containsKey(videoFileName)) {
+                        url = capturedTsUrls.get(videoFileName);
+                    }
+                    allTasks.add(new DownloadTask(url, tsFilePath, allTasks.size() + 1));
                 }
-
             }
-
             reader.close();
         }
+
+        int total = allTasks.size();
+        log.info("总 TS 段数: {}, 使用 3 线程并发下载", total);
+
+        // 2. 将任务均分给 3 个线程
+        int threadCount = 3;
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failCount = new AtomicInteger(0);
+
+        for (int t = 0; t < threadCount; t++) {
+            int start = t * total / threadCount;
+            int end = (t + 1) * total / threadCount;
+            if (t == threadCount - 1) {
+                end = total; // 最后一个线程处理剩余部分
+            }
+            List<DownloadTask> subTasks = allTasks.subList(start, end);
+            final int threadId = t + 1;
+            final int s = start;
+            final int e = end;
+
+            new Thread(() -> {
+                log.info("线程{} 启动: 负责第 {}-{} 段 (共 {} 段)", threadId, s + 1, e, subTasks.size());
+                for (DownloadTask task : subTasks) {
+                    try {
+                        downloadFileWithReferer(task.url, task.destPath, m3U8Info.getVideoUrl());
+                        successCount.incrementAndGet();
+                        log.info("[线程{}][{}/{}] 下载成功: {}", threadId, task.index, total, task.url);
+                    } catch (Exception exception) {
+                        failCount.incrementAndGet();
+                        log.warn("[线程{}][{}/{}] 下载失败: {} - {}", threadId, task.index, total, task.url, exception.getMessage());
+                    }
+                }
+                log.info("线程{} 完成", threadId);
+                latch.countDown();
+            }, "ts-download-" + threadId).start();
+        }
+
+        // 3. 等待所有线程完成
+        latch.await();
+        log.info("全部下载完成: 成功 {} / 失败 {} / 总计 {}", successCount.get(), failCount.get(), total);
     }
 }
