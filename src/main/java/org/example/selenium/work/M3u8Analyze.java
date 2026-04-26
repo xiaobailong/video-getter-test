@@ -256,13 +256,30 @@ public class M3u8Analyze {
             new Thread(() -> {
                 log.info("线程{} 启动: 负责第 {}-{} 段 (共 {} 段)", threadId, s + 1, e, subTasks.size());
                 for (DownloadTask task : subTasks) {
-                    try {
-                        downloadFileWithReferer(task.url, task.destPath, m3U8Info.getVideoUrl());
+                    boolean success = false;
+                    for (int retry = 1; retry <= 3; retry++) {
+                        try {
+                            downloadFileWithReferer(task.url, task.destPath, m3U8Info.getVideoUrl());
+                            success = true;
+                            log.info("[线程{}][{}/{}] 下载成功: {}", threadId, task.index, total, task.url);
+                            break;
+                        } catch (Exception exception) {
+                            log.warn("[线程{}][{}/{}] 第{}次下载失败: {} - {}", threadId, task.index, total, retry, task.url, exception.getMessage());
+                            if (retry < 3) {
+                                // 重试前短暂等待 2 秒
+                                try {
+                                    Thread.sleep(2000);
+                                } catch (InterruptedException ie) {
+                                    Thread.currentThread().interrupt();
+                                }
+                            }
+                        }
+                    }
+                    if (success) {
                         successCount.incrementAndGet();
-                        log.info("[线程{}][{}/{}] 下载成功: {}", threadId, task.index, total, task.url);
-                    } catch (Exception exception) {
+                    } else {
                         failCount.incrementAndGet();
-                        log.warn("[线程{}][{}/{}] 下载失败: {} - {}", threadId, task.index, total, task.url, exception.getMessage());
+                        log.error("[线程{}][{}/{}] 重试3次后仍然失败: {}", threadId, task.index, total, task.url);
                     }
                 }
                 log.info("线程{} 完成", threadId);
