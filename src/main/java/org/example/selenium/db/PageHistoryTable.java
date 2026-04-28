@@ -34,8 +34,11 @@ public class PageHistoryTable extends BaseDB {
 
             String create_time = new DateTime().toString(DateTimeFormatEnum.DATE_TIME);
             String update_time = new DateTime().toString(DateTimeFormatEnum.DATE_TIME);
+            // 转义单引号防止 SQL 注入/语法错误
+            String safeUrl = url.replace("'", "''");
+            String safeTitle = title.replace("'", "''");
             String sql = String.format("insert into page_history(url,title,create_time,update_time) " +
-                    "values('%s','%s','%s','%s')", url, title, create_time, update_time);
+                    "values('%s','%s','%s','%s')", safeUrl, safeTitle, create_time, update_time);
 
             log.info(sql);
             statement.executeUpdate(sql);
@@ -53,7 +56,9 @@ public class PageHistoryTable extends BaseDB {
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
 
-            String sql = String.format("select COUNT(*) as ccount from page_history where url='%s'", url);
+            // 转义单引号防止 SQL 注入/语法错误
+            String safeUrl = url.replace("'", "''");
+            String sql = String.format("select COUNT(*) as ccount from page_history where url='%s'", safeUrl);
 
             ResultSet rs = statement.executeQuery(sql);
 
